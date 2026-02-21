@@ -1,5 +1,4 @@
 package com.authservice.simple_auth.Configure.Interceptors;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
