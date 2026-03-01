@@ -77,7 +77,7 @@ public class authenticationController {
         try {
                 logger.info("Inside authenticateUser");
                 Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
+                    new UsernamePasswordAuthenticationToken(loginRequest.getUsername().trim(), loginRequest.getPassword().trim()));
                 logger.info("After authenticate "+authentication);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
                 String jwt = jwtUtils.generateJwtToken(authentication);
@@ -101,6 +101,9 @@ public class authenticationController {
                 roles));    
                 // return ResponseEntity.ok("success");
         } catch (AuthenticationException e) {
+            logger.info("--------------------------------------------");
+            logger.error("Error: {}", e.getMessage());
+            logger.info("--------------------------------------------");
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body( "Invalid username or password");
         }

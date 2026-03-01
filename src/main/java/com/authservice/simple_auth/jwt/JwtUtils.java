@@ -65,25 +65,35 @@ public class JwtUtils {
 
   private PrivateKey loadPrivateKey() {
     try {
-      String pem;
-      if (!privateKeyPem.isEmpty()) {
-          pem = privateKeyPem.replace("\\n", "\n"); // convert escaped newlines
-      } else if (!privateKeyPath.isEmpty()) {
-          pem = Files.readString(Path.of(privateKeyPath));
-      } else {
-          throw new RuntimeException("No private key found!");
-      }
-      pem = pem.replace("-----BEGIN RSA PRIVATE KEY-----", "")
-                 .replace("-----END RSA PRIVATE KEY-----", "")
-                 .replaceAll("\\s", "");
+        String pem;
 
-      byte[] keyBytes = Base64.getDecoder().decode(pem);
-      PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(keyBytes);
-      return KeyFactory.getInstance("RSA").generatePrivate(spec);
+        if (privateKeyPem != null && !privateKeyPem.isBlank()) {
+            pem = privateKeyPem.replace("\\n", "\n");
+        } else if (privateKeyPath != null && !privateKeyPath.isBlank()) {
+            pem = Files.readString(Path.of(privateKeyPath));
+        } else {
+            throw new IllegalStateException("Private key not configured");
+        }
+
+        pem = pem
+                .replace("-----BEGIN PRIVATE KEY-----", "")
+                .replace("-----END PRIVATE KEY-----", "")
+                .replace("-----BEGIN RSA PRIVATE KEY-----", "")
+                .replace("-----END RSA PRIVATE KEY-----", "")
+                .replace("\r", "")
+                .replace("\n", "")
+                .trim();
+
+        byte[] keyBytes = Base64.getDecoder().decode(pem);
+
+        PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(keyBytes);
+
+        return KeyFactory.getInstance("RSA").generatePrivate(spec);
+
     } catch (Exception e) {
-      throw new RuntimeException("Failed to load private key", e);
+        throw new RuntimeException("Failed to load private key", e);
     }
-  }
+}
 
 
   public String getUserNameFromJwtToken(String token) {
@@ -93,27 +103,33 @@ public class JwtUtils {
 
   private PublicKey loadPublicKey() {
     try {
-      String pem;
+        String pem;
 
-        if (!publicKeyPem.isEmpty()) {
+        if (publicKeyPem != null && !publicKeyPem.isBlank()) {
             pem = publicKeyPem.replace("\\n", "\n");
-        } else if (!publicKeyPath.isEmpty()) {
+        } else if (publicKeyPath != null && !publicKeyPath.isBlank()) {
             pem = Files.readString(Path.of(publicKeyPath));
         } else {
-            throw new RuntimeException("No public key found!");
+            throw new IllegalStateException("Public key not configured");
         }
 
-        pem = pem.replace("-----BEGIN PUBLIC KEY-----", "")
-                 .replace("-----END PUBLIC KEY-----", "")
-                 .replaceAll("\\s", "");
+        pem = pem
+                .replace("-----BEGIN PUBLIC KEY-----", "")
+                .replace("-----END PUBLIC KEY-----", "")
+                .replace("\r", "")
+                .replace("\n", "")
+                .trim();
 
         byte[] keyBytes = Base64.getDecoder().decode(pem);
+
         X509EncodedKeySpec spec = new X509EncodedKeySpec(keyBytes);
+
         return KeyFactory.getInstance("RSA").generatePublic(spec);
+
     } catch (Exception e) {
-      throw new RuntimeException("Failed to load public key", e);
+        throw new RuntimeException("Failed to load public key", e);
     }
-  }
+}
 
 
   public boolean validateJwtToken(String authToken) {
