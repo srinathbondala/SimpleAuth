@@ -1,11 +1,6 @@
 package com.authservice.simple_auth.jwt;
 import java.io.IOException;
 
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +12,11 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.authservice.simple_auth.Service.UserDetailsServiceImpl;
+
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 public class AuthTokenFilter extends OncePerRequestFilter {
   @Autowired
@@ -31,6 +31,11 @@ public class AuthTokenFilter extends OncePerRequestFilter {
   protected void doFilterInternal(@SuppressWarnings("null") HttpServletRequest request, @SuppressWarnings("null") HttpServletResponse response, @SuppressWarnings("null") FilterChain filterChain)
       throws ServletException, IOException {
     try {
+      String path = request.getServletPath();
+      if (path.startsWith("/api/auth/")) {
+          filterChain.doFilter(request, response);
+          return;
+      }
       String jwt = parseJwt(request);
       if (jwt != null && jwtUtils.validateJwtToken(jwt)) {
         String username = jwtUtils.getUserNameFromJwtToken(jwt);
