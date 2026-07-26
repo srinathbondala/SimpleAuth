@@ -14,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Component;
 
 import com.authservice.simple_auth.Service.UserDetailsImpl;
@@ -23,6 +24,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.UnsupportedJwtException;
+import jakarta.annotation.PostConstruct;
 
 @Component
 public class JwtUtils {
@@ -46,15 +48,31 @@ public class JwtUtils {
   @Value("${spring.app.jwtExpirationMs}")
   private int jwtExpirationMs;
 
+  private PrivateKey privateKey;
+  private PublicKey publicKey;
+
+  @PostConstruct
+  public void init() {
+      this.privateKey = loadPrivateKey();
+      this.publicKey = loadPublicKey();
+      logger.info("RSA keys loaded successfully.");
+  }
+
   public String generateJwtToken(Authentication authentication) {
 
     UserDetailsImpl userPrincipal = (UserDetailsImpl) authentication.getPrincipal();
 
     return Jwts.builder()   
         .setSubject((userPrincipal.getEmail()))
+        .claim("username", userPrincipal.getUsername())
+        .claim("roles",
+                userPrincipal.getAuthorities()
+                        .stream()
+                        .map(GrantedAuthority::getAuthority)
+                        .toList())
         .setIssuedAt(new Date())
         .setExpiration(new Date((new Date()).getTime() + jwtExpirationMs))
-        .signWith(loadPrivateKey(), SignatureAlgorithm.RS256)
+        .signWith(privateKey, SignatureAlgorithm.RS256)
         .compact();
   }
   
@@ -80,8 +98,7 @@ public class JwtUtils {
                 .replace("-----END PRIVATE KEY-----", "")
                 .replace("-----BEGIN RSA PRIVATE KEY-----", "")
                 .replace("-----END RSA PRIVATE KEY-----", "")
-                .replace("\r", "")
-                .replace("\n", "")
+                .replaceAll("\\s+", "")
                 .trim();
 
         byte[] keyBytes = Base64.getDecoder().decode(pem);
@@ -97,7 +114,7 @@ public class JwtUtils {
 
 
   public String getUserNameFromJwtToken(String token) {
-    return Jwts.parserBuilder().setSigningKey(loadPublicKey()).build()
+    return Jwts.parserBuilder().setSigningKey(publicKey).build()
                .parseClaimsJws(token).getBody().getSubject();
   }
 
@@ -116,8 +133,7 @@ public class JwtUtils {
         pem = pem
                 .replace("-----BEGIN PUBLIC KEY-----", "")
                 .replace("-----END PUBLIC KEY-----", "")
-                .replace("\r", "")
-                .replace("\n", "")
+                .replaceAll("\\s+", "")
                 .trim();
 
         byte[] keyBytes = Base64.getDecoder().decode(pem);
@@ -134,7 +150,7 @@ public class JwtUtils {
 
   public boolean validateJwtToken(String authToken) {
     try {
-      Jwts.parserBuilder().setSigningKey(loadPublicKey()).build().parse(authToken);
+      Jwts.parserBuilder().setSigningKey(publicKey).build().parse(authToken);
       return true;
     } catch (MalformedJwtException e) {
       logger.error("Invalid JWT token: {}", e.getMessage());
