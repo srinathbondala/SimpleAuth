@@ -34,3 +34,4 @@ build/
 
 *.pem
 .env
+*.txt
